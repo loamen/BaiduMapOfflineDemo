@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<style type="text/css">
+body, html,#allmap {width: 100%;height: 100%;overflow: hidden;margin:0;}
+#l-map{height:100%;width:78%;float:left;border-right:2px solid #bcbcbc;}
+#r-result{height:100%;width:20%;float:left;}
+</style>
+<link rel="stylesheet" type="text/css" href="css/scxnTabDiv.css"/>
+<link rel="stylesheet" type="text/css" href="css/baidu.css" />
+<title>百度API离线访问示例 - 太乐地图</title>
+</head>
+<body>
+	<h1 id="title" style="font-size:20px;">太乐地图百度API离线访问示例</h1>
+		经度
+	<input id="x">
+	</button>
+		纬度
+	<input id="y">
+	</button>
+	<button onclick="panTo(document.getElementById('x').value,document.getElementById('y').value)">
+		定位
+	</button>
+	<input type="BUTTON" name="FullScreen" value="全图" onclick="initCenterAndZoom()"></input>
+	<input type="BUTTON" name="FullScreen" value="平移" onclick="panning()"></input>
+	<input type="BUTTON" name="FullScreen" value="测距" onclick="openDis()"></input>
+	<input type="BUTTON" name="FullScreen" value="全屏显示" onclick="window.open(document.location, 'big', 'fullscreen=yes')"></input>
+	<input type="BUTTON" name="FullScreen" value="画线" onclick="openPolyLine()"></input>
+	<input type="BUTTON" name="FullScreen" value="清除画线" onclick="clearPolyLine()"></input>
+	<input type="BUTTON" name="FullScreen" value="固定" onclick="disableDragging()"></input>
+	<input type="BUTTON" name="FullScreen" value="取消固定" onclick="enableDragging()"></input>
+	<input type="BUTTON" name="FullScreen" value="街道" onclick="map.setMapType(BMAP_NORMAL_MAP)"></input>
+	<input type="BUTTON" name="FullScreen" value="影像" onclick="map.setMapType(BMAP_HYBRID_MAP)"></input>
+	<input type="BUTTON" name="FullScreen" value="离线地图" onclick="openLocalMap()"></input>
+	<div id="info_div" style="width='280px';height='200px;'"></div>
+	<!--startprint-->
+	<div id="allmap" onselectstart="return false;" oncontextmenu="closePolyLine();enableDragging();" style="height: 100%;position:relative;">
+	</div>
+	<!--endprint-->
+</body>
+</html>
+<script type="text/javascript" src="js/BaiduApi_2.0.js"></script>
+<script type="text/javascript" src="js/AreaRestriction_min.js"></script>
+<script type="text/javascript" src="js/TextIconOverlay_min.js"></script>
+<script type="text/javascript" src="js/DistanceTool_min.js"></script>
+<script type="text/javascript" src="js/data_Map.js"></script>
+<script type="text/javascript" src="js/RectangleZoom_min.js"></script>
+<script src="baiduTilesInfo.js"></script>
+<script type="text/javascript">
+var defaultCursor = null;
+var lineArray = new Array();		//线集合
+var currLine = "";					//当前画线
+var polyflag = false;				//画线开关
+var defaultCursor = null;
+var isFixedMap = false;
+
+var tileLayer = new BMap.TileLayer();
+tileLayer.getTilesUrl = function(tileCoord, zoom) {
+	var x = tileCoord.x;
+	var y = tileCoord.y;
+	var url = outputPath + zoom + '/' + x + '/' + y + format;
+	return url;
+}
+var tileMapType = new BMap.MapType('tileMapType', tileLayer, {minZoom: minLevel, maxZoom: maxLevel});
+var map = new BMap.Map('allmap', {mapType: tileMapType});
+
+//初始化鼠标
+defaultCursor = map.getDefaultCursor();
+// 定位到地图中心点
+map.centerAndZoom(new BMap.Point(centX, centY), minLevel);
+// 添加导航控件
+map.addControl(new BMap.NavigationControl()); 
+// 添加比例尺控件
+map.addControl(new BMap.ScaleControl({anchor: BMAP_ANCHOR_TOP_LEFT}));
+// 启用滚轮放大缩小
+map.enableScrollWheelZoom();
+map.enableContinuousZoom();
+//启用键盘操作
+map.enableKeyboard();
+
+//跳转到对应的point
+function panTo(lng, lat) {
+	if (x==null || x == "") {
+		alert("x坐标为空");
+	} else if (y==null || y == "") {
+		alert("y坐标为空");
+	} else {
+		map.panTo(new BMap.Point(lng, lat));
+	}
+}	
+// 全图显示
+function initCenterAndZoom() {
+	map.centerAndZoom(new BMap.Point(centX, centY), minLevel);
+}
+// 平移
+function panning(){
+	closeDis();
+	closePolyLine();
+}
+// 开启测距
+var myDis = new BMapLib.DistanceTool(map);	
+function openDis(){
+	myDis.open();
+}
+// 关闭测距
+function closeDis(){
+	myDis.close();
+}
+
+// 添加点击事件
+map.addEventListener('click', function(e) {
+	//画线
+	document.getElementById("info_div").innerHTML = e.point.lng+","+e.point.lat;
+	if(polyflag){
+		if(currLine!=""){
+			currLine+= ";";
+			map.removeOverlay(lineArray.pop());
+		}
+		currLine+=e.point.lng+","+e.point.lat;
+		lineArray.push(addPolyline(currLine,"#ff0000",0.8,3));
+	}
+});
+//添加线
+function addPolyline(points,lineColor,lineOpacity,strokeWeight){
+	return mapAddPolyline(map,points,lineColor,lineOpacity,strokeWeight);
+}
+//添加面
+function addPolygon(points,lineOpacity,lineColor,fillOpacity,fillColor,strokeWeight){
+	return mapAddPolygon(map,points,lineOpacity,lineColor,fillOpacity,fillColor,strokeWeight);
+}
+// 开启画线
+function openPolyLine(){
+	polyflag = true;
+	currLine = "";
+	map.setDefaultCursor("default");
+}
+// 关闭画线
+function closePolyLine(){
+	polyflag = false;
+	map.setDefaultCursor(defaultCursor);
+}
+// 清除画线
+function clearPolyLine(){
+	while(lineArray.length>0){
+		var l = lineArray.shift();
+		map.removeOverlay(l);
+	}
+	closePolyLine();
+}
+// 固定地图
+function disableDragging(){
+	isFixedMap=!isFixedMap;
+	if(isFixedMap){
+		map.disableDragging();
+	}else{
+		map.enableDragging();
+	}
+}
+// 取消固定地图
+function enableDragging(){
+	map.enableDragging();
+}
+
+// 打开本地地图
+function openLocalMap(){
+	map.setMapType(tileMapType);
+}
+
+
+// 创建用户自定义地标
+if(pointsStr!=""){
+	var points = pointsStr.split("##");
+	for(var i=0;i<points.length;i++)
+	{
+		var point = points[i];
+		var info = point.split('$');
+		addMarker(parseFloat(info[1]), parseFloat(info[0]), info[2], "images/marker_red_sprite.png", 23, 25);
+	}
+}
+
+//添加自定义Marker标注
+function addMarker(lng, lat, markerInfo, iconCursor, cursorWidth, cursorHeight) {
+	if (cursorWidth == null) {
+		cursorWidth = 23;
+	}
+	if (cursorHeight == null) {
+		cursorHeight = 25;
+	}
+	var marker;
+	if (iconCursor != null) {
+		var myIcon = new BMap.Icon(iconCursor, new BMap.Size(cursorWidth, cursorHeight));      
+		marker = new BMap.Marker(new BMap.Point(lng,lat), {
+			icon: myIcon
+		}); // 创建标注
+	} else {
+		marker = new BMap.Marker(new BMap.Point(lng,lat)); // 创建标注
+	}
+	map.addOverlay(marker); // 将标注添加到地图中
+	if(markerInfo!=null){
+		marker.addEventListener("click", function(){
+			alert(markerInfo);
+		});
+	}
+}
+
+//添加覆盖物块,并返回覆盖物
+function mapAddPolygon(map, points, lineOpacity, lineColor, fillOpacity, fillColor, strokeWeight) {
+    if (strokeWeight == null) {
+        strokeWeight = 1;
+    }
+        var ply = new BMap.Polygon(points, {
+            strokeWeight: strokeWeight,
+            strokeColor: fillColor
+        });
+        ply.setFillOpacity(fillOpacity);
+        ply.setFillColor(fillColor);
+        ply.setStrokeOpacity(lineOpacity);
+        map.addOverlay(ply);
+		return ply;
+}
+//添加多个覆盖物快
+function mapAddPolygons(map, points, lineOpacity, lineColor, fillOpacity, fillColor, strokeWeight) {
+    if (strokeWeight == null) {
+        strokeWeight = 1;
+    }
+    for (var i = 0; i < points.length; i++) {
+		mapAddPolygon(map, points[i], lineOpacity, lineColor, fillOpacity, fillColor, strokeWeight);
+    }
+}
+//添加覆盖物线,并返回覆盖物
+function mapAddPolyline(map, points, lineColor, lineOpacity, strokeWeight) {
+    if (strokeWeight == null) {
+        strokeWeight = 1;
+    }
+        var pl = new BMap.Polyline(points, {
+            strokeColor: lineColor,
+            strokeOpacity: lineOpacity,
+            strokeWeight: strokeWeight
+        });
+        map.addOverlay(pl);
+		return pl;
+}
+//添加多个覆盖物线
+function mapAddPolylines(map, points, lineColor, lineOpacity, strokeWeight) {
+    if (strokeWeight == null) {
+        strokeWeight = 1;
+    }
+    for (var i = 0; i < points.length; i++) {
+		mapAddPolyline(map, points[i], lineColor, lineOpacity, strokeWeight);
+    }
+}
+//得到视野并覆盖其他区域
+function getBoundary(map, linecolor, fillcolor, fillopacity, callback, strokeWeight) {
+    if (strokeWeight == null) {
+        strokeWeight = 1;
+    }
+    var boundary = new BMap.Boundary();
+	var fx = 0;
+	var fy = 0;
+    //boundary.get(address,
+    //function(rs) { //获取行政区域
+        //var count = rs.boundaries.length; //行政区域的点集合有多少个
+        //for (var i = 0; i < count; i++) {
+			//document.getElementById("info_div").innerHTML += "<br/>"+i+"个:"+rs.boundaries[i];
+			var boundariesArray = getBoundaries();//rs.boundaries[i]
+            var ply = new BMap.Polyline(boundariesArray, {	
+                strokeWeight: strokeWeight,
+                strokeColor: linecolor,
+				strokeStyle: "dashed"
+            }); //建立多边形覆盖物
+            map.addOverlay(ply); //添加覆盖物
+            //if (i == 0) {
+                map.setViewport(ply.getPath()); //调整视野
+                map.setZoom(map.getZoom() - 2);
+                //计算东南西北四个顶点经纬度
+                var bs = map.getBounds(); //获取可视区域
+                var north = bs.getNorthEast().lat; //北
+                var south = bs.getSouthWest().lat; //南
+                var west = bs.getSouthWest().lng; //西
+                var east = bs.getNorthEast().lng; //东
+                var mapMaxX = east > west ? east: west;
+                var mapMinX = east > west ? west: east;
+                //计算最大边界
+                var boundaries = boundariesArray.split(";");
+                var maxX;
+                var maxXIndex = 0;
+                var minX;
+                var minXIndex = 0;
+                var maxY;
+                var minY;
+                for (var k = 0; k < boundaries.length; k++) {
+                    var point = boundaries[k].split(",");
+                    if (!maxX) {
+                        maxX = point[0];
+                        minX = point[0];
+                        maxY = point[1];
+                        minY = point[1];
+                    } else {
+                        if (maxX * 1 < point[0] * 1) {
+                            maxX = point[0];
+                            maxXIndex = k;
+                        } else if (minX * 1 > point[0] * 1) {
+                            minX = point[0];
+                            minXIndex = k;
+                        }
+                        maxY = maxY * 1 > point[1] * 1 ? maxY: point[1];
+                        minY = minY * 1 < point[1] * 1 ? minY: point[1];
+                    }
+                }
+                var start = maxXIndex > minXIndex ? minXIndex: maxXIndex;
+                var end = maxXIndex > minXIndex ? maxXIndex: minXIndex;
+                var polygonA = [180 + "," + 180 ,0 + "," + 180, 0 + "," + 0];
+                var polygonB = [ 0 + "," + 0, 180 + "," + 0,180 + "," + 180];
+                var polygonA = polygonA.concat(boundaries.slice(start, end + 1));
+                var polygonB = polygonB.concat(boundaries.slice(end, boundaries.length).concat(boundaries.slice(0, start + 1)));
+                mapAddPolygon(map, polygonA.join(";"), 0.01, fillcolor, fillopacity, fillcolor);
+                mapAddPolygon(map, polygonB.join(";"), 0.01, fillcolor, fillopacity, fillcolor);
+            //}
+            map.setViewport(ply.getPath()); //调整视野
+            //限制拖动区域
+			if (isAreaRestriction()) {
+				BMapLib.AreaRestriction.setBounds(map, map.getBounds());
+            }
+            if (callback) {
+                callback();
+            }
+        //}
+    //});
+}
+</script>

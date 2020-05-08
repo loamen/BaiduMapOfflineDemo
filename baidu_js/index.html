@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <style type="text/css">
+        body,
+        html,
+        #allmap {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            margin: 0;
+        }
+
+        #l-map {
+            height: 100%;
+            width: 78%;
+            float: left;
+            border-right: 2px solid #bcbcbc;
+        }
+
+        #r-result {
+            height: 100%;
+            width: 20%;
+            float: left;
+        }
+    </style>
+    <link rel="stylesheet" type="text/css" href="css/scxnTabDiv.css" />
+    <link rel="stylesheet" type="text/css" href="css/baidu.css" />
+    <title>百度API离线访问示例 - loamen.com</title>
+</head>
+
+<body>
+    <!--startprint-->
+    <div id="allmap" onselectstart="return false;" oncontextmenu="closePolyLine();enableDragging();"
+        style="height: 100%;position:relative;">
+    </div>
+    <!--endprint-->
+</body>
+
+</html>
+<script type="text/javascript" src="js/BaiduApi_2.0.js"></script>
+<script src="baiduTilesInfo.js"></script>
+<script type="text/javascript">
+    var defaultCursor = null;
+    var lineArray = new Array();		//线集合
+    var currLine = "";					//当前画线
+    var polyflag = false;				//画线开关
+    var isFixedMap = false;
+
+    var tileLayer = new BMap.TileLayer();
+    tileLayer.getTilesUrl = function (tileCoord, zoom) {
+        var x = tileCoord.x;
+        var y = tileCoord.y;
+        var url = outputPath + zoom + '/' + x + '/' + y + format;
+        return url;
+    }
+    var tileMapType = new BMap.MapType('tileMapType', tileLayer, { minZoom: minLevel, maxZoom: maxLevel });
+    var map = new BMap.Map('allmap', { mapType: tileMapType });
+
+    //初始化鼠标
+    defaultCursor = map.getDefaultCursor();
+    // 定位到地图中心点
+    map.centerAndZoom(new BMap.Point(centX, centY), minLevel);
+    // 添加导航控件
+    map.addControl(new BMap.NavigationControl());
+    // 启用滚轮放大缩小
+    map.enableScrollWheelZoom();
+    map.enableContinuousZoom();
+    //启用键盘操作
+    map.enableKeyboard();
+
+    // 创建用户自定义地标
+    if (pointsStr != "") {
+        var points = pointsStr.split("##");
+        for (var i = 0; i < points.length; i++) {
+            var point = points[i];
+            var info = point.split('$');
+            addMarker(parseFloat(info[1]), parseFloat(info[0]), info[2], "images/marker_red_sprite.png", 23, 25);
+        }
+    }
+
+    //添加自定义Marker标注
+    function addMarker(lng, lat, markerInfo, iconCursor, cursorWidth, cursorHeight) {
+        if (cursorWidth == null) {
+            cursorWidth = 23;
+        }
+        if (cursorHeight == null) {
+            cursorHeight = 25;
+        }
+        var marker;
+        if (iconCursor != null) {
+            var myIcon = new BMap.Icon(iconCursor, new BMap.Size(cursorWidth, cursorHeight));
+            marker = new BMap.Marker(new BMap.Point(lng, lat), {
+                icon: myIcon
+            }); // 创建标注
+        } else {
+            marker = new BMap.Marker(new BMap.Point(lng, lat)); // 创建标注
+        }
+        map.addOverlay(marker); // 将标注添加到地图中
+        if (markerInfo != null) {
+            marker.addEventListener("click", function () {
+                alert(markerInfo);
+            });
+        }
+    }    
+</script>
