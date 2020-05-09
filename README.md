@@ -13,6 +13,10 @@ BaiduMapOfflineDemo
 ├── tiles -------- 瓦片资源
 ```
 
+## 参考
+antv l7离线地图：[https://l7.antv.vision/zh/docs/tutorial/map/offline](https://l7.antv.vision/zh/docs/tutorial/map/offline)  `即便用了MapBox还是会去调用amap.com的js`
+echats离线地图数据包：[https://github.com/apache/incubator-echarts/tree/master/map](https://github.com/apache/incubator-echarts/tree/master/map)  `世界地图只能到国家，不能在城市级别做标注`
+
 ## 截屏
 ![百度WEB离线地图](https://github.com/loamen/BaiduMapOfflineDemo/raw/master/documents/screenshots/1.png)
 ![百度WEB离线地图](https://github.com/loamen/BaiduMapOfflineDemo/raw/master/documents/screenshots/2.png)
